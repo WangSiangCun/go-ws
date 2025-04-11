@@ -9,6 +9,7 @@ type Message struct {
 	Message   string   `json:"message"`
 	TargetIds []string `json:"target_ids"`
 	SourceId  string   `json:"source_id"`
+	Type      int64    `json:"type"`
 }
 type Engine struct {
 	Config               *config.Config
