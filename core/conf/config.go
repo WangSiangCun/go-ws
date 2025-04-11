@@ -2,9 +2,9 @@ package conf
 
 import (
 	"fmt"
-	"go-ws/core/encoding"
-	"go-ws/core/jsonx"
-	"go-ws/core/mapping"
+	"github.com/WangSiangCun/go-ws/core/encoding"
+	"github.com/WangSiangCun/go-ws/core/jsonx"
+	"github.com/WangSiangCun/go-ws/core/mapping"
 	"log"
 	"os"
 	"path"

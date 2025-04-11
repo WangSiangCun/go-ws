@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"go-ws/config"
-	"go-ws/wsContext"
+	"github.com/WangSiangCun/go-ws/config"
+	"github.com/WangSiangCun/go-ws/wsContext"
 )
 
 type Message struct {

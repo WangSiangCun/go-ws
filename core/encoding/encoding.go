@@ -3,8 +3,8 @@ package encoding
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/WangSiangCun/go-ws/core/lang"
 	"github.com/pelletier/go-toml/v2"
-	"go-ws/core/lang"
 
 	"gopkg.in/yaml.v2"
 )

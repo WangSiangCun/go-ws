@@ -43,11 +43,11 @@ package main
 
 import (
     "flag"
-    "go-ws/config"
-    "go-ws/core/conf"
-    "go-ws/engine"
-    "go-ws/hub"
-    "go-ws/wsContext"
+    "github.com/WangSiangCun/go-wsconfig"
+    "github.com/WangSiangCun/go-wscore/conf"
+    "github.com/WangSiangCun/go-wsengine"
+    "github.com/WangSiangCun/go-wshub"
+    "github.com/WangSiangCun/go-wswsContext"
     "net/http"
 )
 

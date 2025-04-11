@@ -1,7 +1,7 @@
 package mapping
 
 import (
-	"go-ws/core/encoding"
+	"github.com/WangSiangCun/go-ws/core/encoding"
 	"io"
 )
 

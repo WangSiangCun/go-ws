@@ -2,10 +2,10 @@ package wsContext
 
 import (
 	"context"
+	"github.com/WangSiangCun/go-ws/config"
+	"github.com/WangSiangCun/go-ws/etcdService"
+	"github.com/WangSiangCun/go-ws/rabbitMQService"
 	"github.com/streadway/amqp"
-	"go-ws/config"
-	"go-ws/etcdService"
-	"go-ws/rabbitMQService"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

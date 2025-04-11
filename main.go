@@ -4,11 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"go-ws/config"
-	"go-ws/core/conf"
-	"go-ws/engine"
-	"go-ws/hub"
-	"go-ws/wsContext"
+	"github.com/WangSiangCun/go-ws/config"
+	"github.com/WangSiangCun/go-ws/core/conf"
+	"github.com/WangSiangCun/go-ws/engine"
+	"github.com/WangSiangCun/go-ws/hub"
+	"github.com/WangSiangCun/go-ws/wsContext"
 	"net/http"
 )
 
