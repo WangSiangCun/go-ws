@@ -16,7 +16,7 @@ go-ws 是一个基于Go语言实现的分布式WebSocket服务器框架，它提
 ### 安装
 
 ```bash
-go get github.com/your-username/go-ws
+go get github.com/WangSiangCun/go-ws
 ```
 
 ### 配置
