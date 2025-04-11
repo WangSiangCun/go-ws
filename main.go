@@ -21,10 +21,16 @@ func main() {
 	e := engine.NewEngine(&c)
 	// ... existing code ...
 	//  接收消息后插件
-	e.SetReadHandlers([]engine.HandlersFunc{ReceiveHandler})
+	e.SetReceiverHandlers([]engine.HandlersFunc{ReceiveHandler})
+	receiverParameters := [][]any{[]any{&engine.Message{Type: 1}}}
+	e.SetReceiverParameters(receiverParameters)
+	//	e.RunHandlers(wsContext.NewContext(context.Background(), &c), e.ReceiveHandlers, e.ReceiveParameters, &engine.Message{})
 
 	//  发送消息前插件
+	sendParameters := [][]any{[]any{1}}
 	e.SetSendHandlers([]engine.HandlersFunc{SendHandler})
+	e.SetSendParameters(sendParameters)
+
 	// ... existing code ...
 	hub := hub.NewHub()
 	go hub.Run(wsContext.NewContext(context.Background(), &c), e)
@@ -45,7 +51,7 @@ const (
 	WebSocketMessageTypeMatch        // websocket message type match
 )
 
-func SendHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Message) *engine.Message {
+func SendHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Message, opts ...any) *engine.Message {
 
 	if message.Type == WebSocketMessageTypeChat {
 		// 聊天类型消息
@@ -72,11 +78,18 @@ func SendHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Me
 	return message
 }
 
-func ReceiveHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Message) *engine.Message {
+func ReceiveHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Message, opts ...any) *engine.Message {
 	// 目标用户接收到消息前的逻辑
 	/* 1.可以完成加解密
 	   2.可以完成一些业务逻辑
 	*/
+
+	if len(opts) != 0 {
+		if a, ok := opts[0].(*engine.Message); ok {
+			fmt.Println("message type:", a.Type)
+		}
+
+	}
 	fmt.Println("receive a message")
 
 	return message

@@ -89,7 +89,7 @@ func (c *Client) readPump(wsContext wsContext.WSContext) {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				return
 			}
-			log.Printf("error: %v", err, messageByte)
+			log.Printf("error: %v", err)
 			//return
 		}
 		c.SendMessage(wsContext, messageByte)

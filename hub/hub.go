@@ -58,13 +58,12 @@ func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 				log.Println("SendChannel通道关闭")
 			}
 			// 插件
-			for _, msgHandler := range e.SendHandlers {
-				message = msgHandler(e, ws, message)
-				if e.IsServerHandlerModel {
-					// 如果是Server handler 模式，就不继续执行了
-					continue
-				}
+			e.RunReceiverHandlers(ws, message)
+			if e.IsServerHandlerModel {
+				// 如果是Server handler 模式，就不继续执行了
+				continue
 			}
+
 			fmt.Println("SendChannel", e.Config.Host+e.Config.WSPort, message)
 			serverToMessage := map[string]*engine.Message{}
 			if message == nil {
@@ -106,9 +105,8 @@ func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 			fmt.Println("ReadChannel", e.Config.Host+e.Config.WSPort, message)
 
 			// 插件
-			for _, msgHandler := range e.SendHandlers {
-				message = msgHandler(e, ws, message)
-			}
+			e.RunReceiverHandlers(ws, message)
+
 			if message == nil {
 				log.Println("消息为空")
 				continue
