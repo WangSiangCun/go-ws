@@ -33,8 +33,3 @@ func main() {
 	}
 
 }
-func SendHanlder(message *engine.Message) *engine.Message {
-	if len(message.TargetIds) == 1 && message.TargetIds[0] == "server" {
-
-	}
-}
