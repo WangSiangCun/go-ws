@@ -40,9 +40,22 @@ func main() {
 
 }
 
+const (
+	WebSocketMessageTypeChat  = iota // websocket message type chat
+	WebSocketMessageTypeMatch        // websocket message type match
+)
+
 func SendHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Message) *engine.Message {
-	// 截断，只和server通信的例子
-	if len(message.TargetIds) == 1 && message.TargetIds[0] == "server" {
+
+	if message.Type == WebSocketMessageTypeChat {
+		// 聊天类型消息
+		fmt.Println("chat message")
+	} else if message.Type == WebSocketMessageTypeMatch {
+		// 截断，只和server
+
+		// 匹配类型消息
+
+		fmt.Println("chat message")
 		e.IsServerHandlerModel = true
 
 		// 执行您的逻辑
