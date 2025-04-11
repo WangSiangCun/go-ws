@@ -1,4 +1,4 @@
-module go-ws
+module github.com/WangSiangCun/go-ws
 
 go 1.24.2
 
