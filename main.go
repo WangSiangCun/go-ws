@@ -32,7 +32,7 @@ func main() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		hub.ServeWs(w, r, e)
 	})
-	err := http.ListenAndServe(c.Port, nil)
+	err := http.ListenAndServe(c.WSPort, nil)
 	if err != nil {
 		fmt.Println("ListenAndServe: ", err)
 		return

@@ -1,6 +1,6 @@
 Name: chat.ws
 Host: 0.0.0.0
-Port: :4444
+WSPort: :4444
 Etcd:
   Hosts:
     - 47.120.67.50:2379

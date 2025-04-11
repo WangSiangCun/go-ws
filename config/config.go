@@ -16,7 +16,7 @@ type Config struct {
 	Etcd     Etcd
 	RabbitMQ RabbitMQ
 	Host     string
-	Port     string
+	WSPort   string
 	PongTime int64
 	JWT      JWT
 }

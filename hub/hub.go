@@ -65,7 +65,7 @@ func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 					continue
 				}
 			}
-			fmt.Println("SendChannel", e.Config.Host+e.Config.Port, message)
+			fmt.Println("SendChannel", e.Config.Host+e.Config.WSPort, message)
 			serverToMessage := map[string]*engine.Message{}
 			if message == nil {
 				log.Println("消息为空")
@@ -103,7 +103,7 @@ func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 			if !ok {
 				log.Println("ReadChannel通道关闭")
 			}
-			fmt.Println("ReadChannel", e.Config.Host+e.Config.Port, message)
+			fmt.Println("ReadChannel", e.Config.Host+e.Config.WSPort, message)
 
 			// 插件
 			for _, msgHandler := range e.SendHandlers {

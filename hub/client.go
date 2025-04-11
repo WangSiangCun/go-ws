@@ -152,7 +152,7 @@ func (c *Client) SendMessage(wsContext wsContext.WSContext, messageByte []byte) 
 	c.Hub.SendChannel <- message
 }
 func (c *Client) ReceiveMessage(wsContext wsContext.WSContext, e *engine.Engine) {
-	working, err := rabbitMQService.ReceiveWorking(wsContext.RabbitMQConnection, e.Config.Host+e.Config.Port)
+	working, err := rabbitMQService.ReceiveWorking(wsContext.RabbitMQConnection, e.Config.Host+e.Config.WSPort)
 	if err != nil {
 		log.Panicln("启动接收错误")
 	}
@@ -180,13 +180,13 @@ func (c *Client) Register(hub *Hub, wsContext wsContext.WSContext, clientId stri
 	ticker := time.Tick(10 * time.Second)
 	var leaseId clientv3.LeaseID
 	//立刻设置租约，不然要等五秒
-	leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.Port)
+	leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
 	for {
 		select {
 		case <-ticker:
 			// 每隔 10 秒执行一次该操作
 			fmt.Println("On", c.Id)
-			leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.Port)
+			leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
 		case <-c.ToOffline:
 			fmt.Println("exit")
 			etcdService.CancelLease(wsContext.EtcdClient, leaseId)
