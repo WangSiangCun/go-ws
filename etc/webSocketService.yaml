@@ -1,0 +1,24 @@
+Name: chat.ws
+Host: 0.0.0.0
+Port: :4444
+Etcd:
+  Hosts:
+    - 47.120.67.50:2379
+  Key: chat.ws
+
+
+JWT:
+  AccessSecret: asdljasdoiasodeqwewqe
+  AccessExpire: 360000000000000
+RabbitMQ:
+  Hosts:
+    - 47.120.67.50:5672
+  MQUrl: amqp://guest:guest@47.120.67.50:5672/
+  WorkingQueueName: chat
+  Exchange: GDoc
+Telemetry:
+  Name: chat.ws
+  Endpoint: http://47.120.67.50:14268/api/traces
+  Sampler: 1.0
+  Batcher: jaeger
+PongTime: 10
