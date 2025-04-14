@@ -8,6 +8,7 @@ import (
 	"github.com/WangSiangCun/go-ws/rabbitMQService"
 	"github.com/WangSiangCun/go-ws/wsContext"
 	"github.com/gorilla/websocket"
+	"github.com/zeromicro/go-zero/core/logx"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"net/http"
@@ -51,7 +52,8 @@ type Client struct {
 	// The websocket connection.
 	Conn *websocket.Conn
 
-	WriteChannel chan []byte
+	WriteChannel chan []byte // 用于发送给客户端的channel，消息发到这里面，websocket会从channel里读取消息并发送给客户端
+	ReadChannel  chan []byte // 用于服务端接收端的channel，websocket会从客户端读消息并发到这个channel
 
 	// Buffered channel of outbound messages.
 	Id string
@@ -71,14 +73,34 @@ type Client struct {
 // reads from this goroutine.
 var unOnlineMutex sync.Mutex
 
+func (c *Client) NewClient() *Client {
+	return &Client{
+		Hub:          c.Hub,
+		Conn:         c.Conn,
+		WriteChannel: make(chan []byte, bufSize),
+		ReadChannel:  make(chan []byte, bufSize),
+		Id:           c.Id,
+		ToOffline:    make(chan bool),
+	}
+
+}
+func (c *Client) Close() {
+	//断开链接默认会走这里
+	fmt.Println("exit")
+	unOnlineMutex.Lock() //加锁，避免不同步
+	// 通知hub下线
+	c.Hub.Unregister <- c
+	// 通知etcd离线
+	c.ToOffline <- true
+	// 关闭写channel
+	close(c.WriteChannel)
+	c.Hub.RemoveClient(c.Id)
+	unOnlineMutex.Unlock()
+	c.Conn.Close()
+}
 func (c *Client) readPump(wsContext wsContext.WSContext) {
 	defer func() {
-		//断开链接默认会走这里
-		unOnlineMutex.Lock() //加锁，避免不同步
-		c.Hub.Unregister <- c
-		c.ToOffline <- true
-		unOnlineMutex.Unlock()
-		c.Conn.Close()
+		c.Close()
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -92,7 +114,9 @@ func (c *Client) readPump(wsContext wsContext.WSContext) {
 			log.Printf("error: %v", err)
 			//return
 		}
-		c.SendMessage(wsContext, messageByte)
+
+		c.ReadChannel <- messageByte
+
 	}
 }
 func (c *Client) writePump(wsContext wsContext.WSContext) {
@@ -137,19 +161,23 @@ func (c *Client) writePump(wsContext wsContext.WSContext) {
 	}
 
 }
-func (c *Client) SendMessage(wsContext wsContext.WSContext, messageByte []byte) {
-	message := &engine.Message{}
-	err := json.Unmarshal(messageByte, message)
-	if err != nil {
-		log.Printf("error: %v", err)
-		return
+func (c *Client) SendMessage(wsContext wsContext.WSContext, e *engine.Engine) {
+	for {
+		select {
+		case messageByte, ok := <-c.ReadChannel:
+			if !ok {
+				logx.Error("SendMessage !ok	" + string(messageByte))
+			}
+			message := &engine.Message{}
+			err := json.Unmarshal(messageByte, message)
+			if err != nil {
+				log.Printf("error: %v", err)
+				return
+			}
+			// 进入中转中心
+			c.Hub.SendChannel <- message
+		}
 	}
-	//  插件
-	for _, msgHandler := range c.SendHandlers {
-		message = msgHandler(message)
-	}
-	// 进入中转中心
-	c.Hub.SendChannel <- message
 }
 func (c *Client) ReceiveMessage(wsContext wsContext.WSContext, e *engine.Engine) {
 	working, err := rabbitMQService.ReceiveWorking(wsContext.RabbitMQConnection, e.Config.Host+e.Config.WSPort)
@@ -188,10 +216,8 @@ func (c *Client) Register(hub *Hub, wsContext wsContext.WSContext, clientId stri
 			fmt.Println("On", c.Id)
 			leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
 		case <-c.ToOffline:
-			fmt.Println("exit")
-			etcdService.CancelLease(wsContext.EtcdClient, leaseId)
-			hub.Clients[c.Id] = nil
 			//退出直接取消租约，设置租约时间只是保障
+			etcdService.CancelLease(wsContext.EtcdClient, leaseId)
 			return
 		}
 	}

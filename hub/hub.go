@@ -39,20 +39,16 @@ func NewHub() *Hub {
 		Clients:     make(map[string]*Client),
 	}
 }
+func (h *Hub) RemoveClient(clientId string) {
+	h.Clients[clientId] = nil
+}
 func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 	for {
 		select {
 		case client := <-h.Register:
 			go client.Register(h, ws, client.Id, e)
 		case client := <-h.Unregister:
-			fmt.Println("断开连接", client.Id)
-			if _, ok := h.Clients[client.Id]; ok {
-				//取消注册
-				//删除指定client
-				delete(h.Clients, client.Id)
-				//关闭channel
-				close(client.WriteChannel)
-			}
+			h.RemoveClient(client.Id)
 		case message, ok := <-h.SendChannel:
 			if !ok {
 				log.Println("SendChannel通道关闭")
@@ -160,14 +156,17 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request, e *engine.Engine) 
 		log.Println(err)
 		return
 	}
-	//chatId := r.Header["Chatid"][0] //r.Header只有首字母大写
-
 	// myMap 包含 key 值，val 为对应的 value 值
+	if h.Clients[clientId] != nil {
+		// 存在 key
+		h.Clients[clientId].Close()
+	}
 
 	client := &Client{
 		Hub:          h,
 		Conn:         conn,
 		WriteChannel: make(chan []byte, bufSize),
+		ReadChannel:  make(chan []byte, bufSize),
 		Id:           clientId,
 		ToOffline:    make(chan bool),
 	}
@@ -175,4 +174,5 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request, e *engine.Engine) 
 	go client.readPump(wsContext)
 	go client.writePump(wsContext)
 	go client.ReceiveMessage(wsContext, e)
+	go client.SendMessage(wsContext, e)
 }

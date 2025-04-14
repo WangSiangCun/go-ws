@@ -21,6 +21,7 @@ func main() {
 	e := engine.NewEngine(&c)
 	// ... existing code ...
 	//  接收消息后插件
+	//e.OpenJWT(config.JWT{c.JWT.AccessSecret, c.JWT.AccessExpire})
 	e.SetReceiverHandlers([]engine.HandlersFunc{ReceiveHandler})
 	receiverParameters := [][]any{[]any{&engine.Message{Type: 1}}}
 	e.SetReceiverParameters(receiverParameters)
