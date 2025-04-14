@@ -162,14 +162,7 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request, e *engine.Engine) 
 		h.Clients[clientId].Close()
 	}
 
-	client := &Client{
-		Hub:          h,
-		Conn:         conn,
-		WriteChannel: make(chan []byte, bufSize),
-		ReadChannel:  make(chan []byte, bufSize),
-		Id:           clientId,
-		ToOffline:    make(chan bool),
-	}
+	client := NewClient(h, conn, clientId)
 	client.Hub.Register <- client
 	go client.readPump(wsContext)
 	go client.writePump(wsContext)

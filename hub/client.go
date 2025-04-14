@@ -73,16 +73,18 @@ type Client struct {
 // reads from this goroutine.
 var unOnlineMutex sync.Mutex
 
-func (c *Client) NewClient() *Client {
-	return &Client{
-		Hub:          c.Hub,
-		Conn:         c.Conn,
-		WriteChannel: make(chan []byte, bufSize),
-		ReadChannel:  make(chan []byte, bufSize),
-		Id:           c.Id,
-		ToOffline:    make(chan bool),
+func NewClient(hub *Hub, conn *websocket.Conn, id string) *Client {
+	client := &Client{
+		Hub:             hub,
+		Conn:            conn,
+		WriteChannel:    make(chan []byte, bufSize),
+		ReadChannel:     make(chan []byte, bufSize),
+		Id:              id,
+		ToOffline:       make(chan bool),
+		SendHandlers:    []func(msg *engine.Message) *engine.Message{},
+		ReceiveHandlers: []func(msg *engine.Message) *engine.Message{},
 	}
-
+	return client
 }
 func (c *Client) Close() {
 	//断开链接默认会走这里
@@ -99,9 +101,6 @@ func (c *Client) Close() {
 	c.Conn.Close()
 }
 func (c *Client) readPump(wsContext wsContext.WSContext) {
-	defer func() {
-		c.Close()
-	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
@@ -211,6 +210,7 @@ func (c *Client) Register(hub *Hub, wsContext wsContext.WSContext, clientId stri
 	var leaseId clientv3.LeaseID
 	//立刻设置租约，不然要等五秒
 	leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
+	fmt.Println("register:" + clientId)
 	for {
 		select {
 		case <-ticker:
