@@ -106,13 +106,15 @@ func (c *Client) readPump(wsContext wsContext.WSContext) {
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
+
 		_, messageByte, err := c.Conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				return
-			}
+			//if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			//	return
+			//}
 			log.Printf("error: %v", err)
-			//return
+			c.Close()
+			return
 		}
 
 		c.ReadChannel <- messageByte
