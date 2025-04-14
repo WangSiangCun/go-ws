@@ -58,7 +58,7 @@ func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 				log.Println("SendChannel通道关闭")
 			}
 			// 插件
-			e.RunReceiverHandlers(ws, message)
+			e.RunSendHandlers(ws, message)
 			if e.IsServerHandlerModel {
 				// 如果是Server handler 模式，就不继续执行了
 				continue
