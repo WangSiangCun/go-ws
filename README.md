@@ -1,6 +1,7 @@
 # go-ws
 
 go-ws 是一个基于Go语言实现的分布式WebSocket服务器框架，它提供了完整的WebSocket连接管理和消息处理机制，支持多服务器部署和分布式消息处理。
+![Uploading image.png…]()
 
 ## 特性
 
