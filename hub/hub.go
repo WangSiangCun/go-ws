@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/WangSiangCun/go-ws/core/jwtHelper"
 	"github.com/WangSiangCun/go-ws/engine"
+	"github.com/WangSiangCun/go-ws/etcdService"
 	"github.com/WangSiangCun/go-ws/rabbitMQService"
 	"github.com/WangSiangCun/go-ws/wsContext"
 	"github.com/golang-jwt/jwt/v4"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the
@@ -42,82 +44,109 @@ func NewHub() *Hub {
 func (h *Hub) RemoveClient(clientId string) {
 	h.Clients[clientId] = nil
 }
+func (h *Hub) RegisterClient(wsContext wsContext.WSContext, hub *Hub, e *engine.Engine, clientId string, c *Client) {
+	hub.Clients[clientId] = c
+	//注册用户在etcd上
+	ticker := time.Tick(10 * time.Second)
+	var leaseId clientv3.LeaseID
+	//立刻设置租约，不然要等五秒
+	leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
+	fmt.Println("register:" + clientId)
+	for {
+		select {
+		case <-ticker:
+			// 每隔 10 秒执行一次该操作
+			fmt.Println("On", c.Id)
+			leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
+		case <-c.ToOffline:
+			//退出直接取消租约，设置租约时间只是保障
+			etcdService.CancelLease(wsContext.EtcdClient, leaseId)
+			return
+		}
+	}
+
+}
+func (h *Hub) SendMessage(ws wsContext.WSContext, message *engine.Message, e *engine.Engine) {
+	// 插件
+	e.RunSendHandlers(ws, message)
+	if e.IsServerHandlerModel {
+		// 如果是Server handler 模式，就不继续执行了
+		return
+	}
+
+	fmt.Println("SendChannel", e.Config.Host+e.Config.WSPort, message)
+	serverToMessage := map[string]*engine.Message{}
+	if message == nil {
+		log.Println("消息为空")
+		return
+	}
+	// 按服务器：IP分组 重新组装message
+	for _, targetId := range message.TargetIds {
+		get, err := ws.EtcdClient.Get(ws.Context, targetId, clientv3.WithPrefix())
+		if err != nil {
+			return
+		}
+		if len(get.Kvs) == 0 {
+			continue
+		}
+		serverIPANDHost := string(get.Kvs[0].Value)
+		if serverToMessage[serverIPANDHost] == nil {
+			serverToMessage[serverIPANDHost] = &engine.Message{
+				Message:   message.Message,
+				TargetIds: []string{targetId},
+				SourceId:  message.SourceId,
+			}
+		} else {
+			serverToMessage[serverIPANDHost].TargetIds = append(serverToMessage[serverIPANDHost].TargetIds, targetId)
+		}
+	}
+	// 发送消息
+	for serverIPANDHost, toMessage := range serverToMessage {
+		messageByte, err := json.Marshal(toMessage)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+		rabbitMQService.PublishWorking(ws.RabbitMQConnection, serverIPANDHost, messageByte)
+	}
+}
+func (h *Hub) ReceiveMessage(ws wsContext.WSContext, message *engine.Message, e *engine.Engine) {
+	// 插件
+	e.RunReceiverHandlers(ws, message)
+
+	if message == nil {
+		log.Println("消息为空")
+		return
+	}
+	// 发送给对应的客户端
+	for _, targetId := range message.TargetIds {
+		if client, ok := h.Clients[targetId]; ok {
+			jsonMessage, err := json.Marshal(message)
+			if err != nil {
+				log.Printf("error: %v", err)
+			}
+			client.WriteChannel <- jsonMessage
+		}
+	}
+}
 func (h *Hub) Run(ws wsContext.WSContext, e *engine.Engine) {
 	for {
 		select {
 		case client := <-h.Register:
-			go client.Register(h, ws, client.Id, e)
+			go h.RegisterClient(ws, h, e, client.Id, client)
 		case client := <-h.Unregister:
 			h.RemoveClient(client.Id)
 		case message, ok := <-h.SendChannel:
 			if !ok {
 				log.Println("SendChannel通道关闭")
 			}
-			// 插件
-			e.RunSendHandlers(ws, message)
-			if e.IsServerHandlerModel {
-				// 如果是Server handler 模式，就不继续执行了
-				continue
-			}
-
 			fmt.Println("SendChannel", e.Config.Host+e.Config.WSPort, message)
-			serverToMessage := map[string]*engine.Message{}
-			if message == nil {
-				log.Println("消息为空")
-				break
-			}
-			// 按服务器：IP分组 重新组装message
-			for _, targetId := range message.TargetIds {
-				get, err := ws.EtcdClient.Get(ws.Context, targetId, clientv3.WithPrefix())
-				if err != nil {
-					return
-				}
-				if len(get.Kvs) == 0 {
-					continue
-				}
-				serverIPANDHost := string(get.Kvs[0].Value)
-				if serverToMessage[serverIPANDHost] == nil {
-					serverToMessage[serverIPANDHost] = &engine.Message{
-						Message:   message.Message,
-						TargetIds: []string{targetId},
-						SourceId:  message.SourceId,
-					}
-				} else {
-					serverToMessage[serverIPANDHost].TargetIds = append(serverToMessage[serverIPANDHost].TargetIds, targetId)
-				}
-			}
-			// 发送消息
-			for serverIPANDHost, toMessage := range serverToMessage {
-				messageByte, err := json.Marshal(toMessage)
-				if err != nil {
-					log.Printf("error: %v", err)
-				}
-				rabbitMQService.PublishWorking(ws.RabbitMQConnection, serverIPANDHost, messageByte)
-			}
+			go h.SendMessage(ws, message, e)
 		case message, ok := <-h.ReadChannel:
 			if !ok {
 				log.Println("ReadChannel通道关闭")
 			}
 			fmt.Println("ReadChannel", e.Config.Host+e.Config.WSPort, message)
-
-			// 插件
-			e.RunReceiverHandlers(ws, message)
-
-			if message == nil {
-				log.Println("消息为空")
-				continue
-			}
-			// 发送给对应的客户端
-			for _, targetId := range message.TargetIds {
-				if client, ok := h.Clients[targetId]; ok {
-					jsonMessage, err := json.Marshal(message)
-					if err != nil {
-						log.Printf("error: %v", err)
-					}
-					client.WriteChannel <- jsonMessage
-				}
-			}
-
+			go h.ReceiveMessage(ws, message, e)
 		}
 
 	}
