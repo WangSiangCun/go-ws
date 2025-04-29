@@ -76,7 +76,7 @@ func (e *Engine) runHandlers(wsCtx wsContext.WSContext, handlers []HandlersFunc,
 	}
 }
 
-// RunHandlers 执行插件
+// RunSendHandlers 执行插件
 func (e *Engine) RunSendHandlers(wsCtx wsContext.WSContext, message *Message) {
 	e.runHandlers(wsCtx, e.SendHandlers, &e.SendParameters, message)
 }

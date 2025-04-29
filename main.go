@@ -62,7 +62,7 @@ func SendHandler(e *engine.Engine, wsCtx wsContext.WSContext, message *engine.Me
 
 		// 匹配类型消息
 
-		fmt.Println("chat message")
+		fmt.Println("match message")
 		e.IsServerHandlerModel = true
 
 		// 执行您的逻辑

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/WangSiangCun/go-ws/engine"
-	"github.com/WangSiangCun/go-ws/etcdService"
 	"github.com/WangSiangCun/go-ws/rabbitMQService"
 	"github.com/WangSiangCun/go-ws/wsContext"
 	"github.com/gorilla/websocket"
@@ -200,28 +199,6 @@ func (c *Client) ReceiveMessage(wsContext wsContext.WSContext, e *engine.Engine)
 			fmt.Println(err)
 		}
 		c.Hub.ReadChannel <- message
-	}
-
-}
-func (c *Client) Register(hub *Hub, wsContext wsContext.WSContext, clientId string, e *engine.Engine) {
-	hub.Clients[c.Id] = c
-	//注册用户在etcd上
-	ticker := time.Tick(10 * time.Second)
-	var leaseId clientv3.LeaseID
-	//立刻设置租约，不然要等五秒
-	leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
-	fmt.Println("register:" + clientId)
-	for {
-		select {
-		case <-ticker:
-			// 每隔 10 秒执行一次该操作
-			fmt.Println("On", c.Id)
-			leaseId = etcdService.SetLease(wsContext.EtcdClient, e.Config.PongTime, clientId, e.Config.Host+e.Config.WSPort)
-		case <-c.ToOffline:
-			//退出直接取消租约，设置租约时间只是保障
-			etcdService.CancelLease(wsContext.EtcdClient, leaseId)
-			return
-		}
 	}
 
 }
